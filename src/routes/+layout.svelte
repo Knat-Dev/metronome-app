@@ -3,11 +3,7 @@
 </script>
 
 <div class="app">
-	<main>
+	<main class="flex flex-col items-center justify-center h-screen gap-2">
 		<slot />
 	</main>
-
-	<footer>
-		<p>visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to learn SvelteKit</p>
-	</footer>
 </div>

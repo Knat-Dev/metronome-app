@@ -24,7 +24,7 @@ export class AudioService {
 		const gain = this.audioContext.createGain();
 
 		osc.connect(gain).connect(this.audioContext.destination);
-		gain.gain.value = beatNumber === 1 ? 0.5 : 0.25; // Emphasize the first beat
+		gain.gain.value = beatNumber === 1 ? 0.2 : 0.1; // Emphasize the first beat
 		osc.frequency.value = beatNumber === 1 ? 880 : 440; // Different frequency for the first beat
 
 		osc.start(time);

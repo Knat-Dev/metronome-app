@@ -1,3 +1,9 @@
 export default class SongPart {
-	constructor(public barAmount: number, public timeSignature: [number, number]) {}
+	constructor(
+		public bpm: number,
+		public timeSignature: number[],
+		public startTick?: number,
+		public endTick?: number,
+		public bars?: number
+	) {}
 }

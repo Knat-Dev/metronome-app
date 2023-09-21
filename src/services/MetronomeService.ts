@@ -21,9 +21,15 @@ export class MetronomeService {
 	}
 
 	start() {
-		this.audioService?.initAudioContext();
-		this.nextNoteTime = this.audioService!.audioContext!.currentTime;
-		this.intervalID = window.setInterval(this.scheduler, 25);
+		if (!this.intervalID) {
+			this.audioService?.initAudioContext();
+			this.nextNoteTime = this.audioService!.audioContext!.currentTime;
+			this.intervalID = setInterval(this.scheduler, 25);
+			metronomeStore.update((state) => ({
+				...state,
+				isPlaying: true
+			}));
+		}
 	}
 
 	stop() {
@@ -31,6 +37,10 @@ export class MetronomeService {
 			clearInterval(this.intervalID);
 			this.intervalID = undefined;
 			this.beatNumber = 1;
+			metronomeStore.update((state) => ({
+				...state,
+				isPlaying: false
+			}));
 		}
 	}
 
