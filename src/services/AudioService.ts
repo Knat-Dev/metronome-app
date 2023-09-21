@@ -3,7 +3,7 @@ export class AudioService {
 	audioContext: AudioContext | null = null;
 	beatNumber: number = 0;
 	noteLength = 0.05; // length of "beep" in seconds
-	i = 440;
+
 	private constructor() {}
 
 	static getInstance(): AudioService {
@@ -25,8 +25,7 @@ export class AudioService {
 
 		osc.connect(gain).connect(this.audioContext.destination);
 		gain.gain.value = beatNumber === 1 ? 0.5 : 0.25; // Emphasize the first beat
-		osc.frequency.value =
-			beatNumber === 1 ? (this.i *= Math.pow(2, 1 / 12)) : (this.i *= Math.pow(2, 1 / 12)); // Different frequency for the first beat
+		osc.frequency.value = beatNumber === 1 ? 880 : 440; // Different frequency for the first beat
 
 		osc.start(time);
 		osc.stop(time + this.noteLength);
