@@ -1,20 +1,22 @@
-import metronomeStore from '../stores/metronomeStore';
+import type { Unsubscriber } from 'svelte/store';
+import metronomeStore, { updateIsPlaying, type TimeSignature } from '../stores/metronomeStore';
 import { AudioService } from './AudioService';
 
 export class MetronomeService {
 	public bpm = 120;
-	public timeSignature = [4, 4];
+	public timeSignature: TimeSignature = { beatsPerMeasure: 4, beatUnit: 4 };
 	private audioService = AudioService.getInstance();
 	public nextNoteTime = 0.0;
 	public beatNumber = 1;
 	private intervalID: number | undefined;
+	public unsubscribe?: Unsubscriber;
 
 	constructor() {
 		this.subscribeToStore();
 	}
 
 	subscribeToStore() {
-		metronomeStore.subscribe((val) => {
+		this.unsubscribe = metronomeStore.subscribe((val) => {
 			this.bpm = val.bpm;
 			this.timeSignature = val.timeSignature;
 		});
@@ -23,12 +25,9 @@ export class MetronomeService {
 	start() {
 		if (!this.intervalID) {
 			this.audioService?.initAudioContext();
-			this.nextNoteTime = this.audioService!.audioContext!.currentTime;
+			this.nextNoteTime = 0;
 			this.intervalID = setInterval(this.scheduler, 25);
-			metronomeStore.update((state) => ({
-				...state,
-				isPlaying: true
-			}));
+			updateIsPlaying(true);
 		}
 	}
 
@@ -37,10 +36,7 @@ export class MetronomeService {
 			clearInterval(this.intervalID);
 			this.intervalID = undefined;
 			this.beatNumber = 1;
-			metronomeStore.update((state) => ({
-				...state,
-				isPlaying: false
-			}));
+			updateIsPlaying(false);
 		}
 	}
 
@@ -61,6 +57,6 @@ export class MetronomeService {
 	}
 
 	private updateBeatNumber(): void {
-		this.beatNumber = (this.beatNumber % this.timeSignature[0]) + 1;
+		this.beatNumber = (this.beatNumber % this.timeSignature.beatsPerMeasure) + 1;
 	}
 }

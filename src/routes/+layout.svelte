@@ -3,7 +3,7 @@
 </script>
 
 <div class="app">
-	<main class="flex flex-col items-center justify-center h-screen gap-2">
+	<main class="flex flex-col max-w-xs m-auto items-center justify-center h-screen gap-2">
 		<slot />
 	</main>
 </div>

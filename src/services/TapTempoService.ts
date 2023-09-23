@@ -1,4 +1,4 @@
-import metronomeStore from '../stores/metronomeStore';
+import { updateBpm } from '../stores/metronomeStore';
 
 export class TapTempoService {
 	private taps: number[] = [];
@@ -19,12 +19,7 @@ export class TapTempoService {
 		this.taps.push(now);
 		if (this.taps.length >= this.tapLimit) {
 			const bpm = this.calculateBPM();
-			console.log(`Calculated BPM: ${bpm}`);
-
-			metronomeStore.update((state) => ({
-				...state,
-				bpm
-			}));
+			updateBpm(bpm);
 		}
 	}
 
