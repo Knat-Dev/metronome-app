@@ -31,10 +31,14 @@ export class AudioService {
 		const gain = this.audioContext.createGain();
 
 		osc.connect(gain).connect(this.audioContext.destination);
-		gain.gain.value = beatNumber === 1 ? this.volume * 0.002 : this.volume * 0.001; // Emphasize the first beat
+		gain.gain.value = beatNumber === 1 ? this.volume * 0.008 : this.volume * 0.004; // Emphasize the first beat
 		osc.frequency.value = beatNumber === 1 ? 880 : 440; // Different frequency for the first beat
 
 		osc.start(time);
+
+		// Smoothly ramp down the gain to almost zero just before the oscillator stops
+		gain.gain.exponentialRampToValueAtTime(0.001, time + this.noteLength + 0.001);
+
 		osc.stop(time + this.noteLength);
 	}
 }

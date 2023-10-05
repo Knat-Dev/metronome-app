@@ -11,15 +11,17 @@
 	} from '../stores/metronomeStore';
 
 	const tapTempoService = new TapTempoService();
-	const metronomeService = new MetronomeService();
+	const metronomeService = MetronomeService.getInstance();
 
 	let isPlaying = false;
+	let isPaused = false;
 	let bpm = 120;
 	let timeSignature = { beatsPerMeasure: 4, beatUnit: 4 } as TimeSignature;
 	let volume = 1;
 
 	metronomeStore.subscribe((val) => {
 		isPlaying = val.isPlaying;
+		isPaused = val.isPaused;
 		bpm = val.bpm;
 		timeSignature = val.timeSignature;
 		volume = val.volume;
@@ -32,6 +34,10 @@
 
 	const stop = () => {
 		metronomeService.stop();
+	};
+
+	const togglePlay = () => {
+		metronomeService.togglePlay();
 	};
 
 	const tap = () => {
@@ -95,13 +101,19 @@
 	/>
 </div>
 <div class="flex gap-2 pb-0 items-center">
+	{#if isPlaying}
+		<button
+			class="py-2 px-5 bg-violet-700 text-white rounded-md hover:bg-violet-600 transition-colors"
+			on:click={togglePlay}>{isPaused ? 'Play' : 'Pause'}</button
+		>
+	{/if}
 	<button
 		class="py-2 px-5 bg-violet-700 text-white rounded-md hover:bg-violet-600 transition-colors"
-		on:click={start}>start</button
+		on:click={start}>Start</button
 	>
 	<button
 		class="max-w-sm py-2 px-5 text-white rounded-md border-white border hover:bg-violet-700 hover:text-white transition-colors hover:border-violet-700 active:bg-violet-600"
-		on:click={stop}>stop</button
+		on:click={stop}>Stop</button
 	>
 </div>
 <div>{isPlaying ? 'Playing' : 'Paused'}</div>
