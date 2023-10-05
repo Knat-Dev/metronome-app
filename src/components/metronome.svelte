@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
+	import { AudioService } from '../services/AudioService';
 	import { MetronomeService } from '../services/MetronomeService';
 	import { TapTempoService } from '../services/TapTempoService';
 	import metronomeStore, {
@@ -12,9 +13,12 @@
 
 	const tapTempoService = new TapTempoService();
 	const metronomeService = MetronomeService.getInstance();
+	const audioService = AudioService.getInstance();
 
+	let currentTime = 0;
 	let isPlaying = false;
 	let isPaused = false;
+	let hasMidi = false;
 	let bpm = 120;
 	let timeSignature = { beatsPerMeasure: 4, beatUnit: 4 } as TimeSignature;
 	let volume = 1;
@@ -22,6 +26,7 @@
 	metronomeStore.subscribe((val) => {
 		isPlaying = val.isPlaying;
 		isPaused = val.isPaused;
+		hasMidi = val.hasMidi;
 		bpm = val.bpm;
 		timeSignature = val.timeSignature;
 		volume = val.volume;
@@ -34,6 +39,7 @@
 
 	const stop = () => {
 		metronomeService.stop();
+		currentTime = 0.0;
 	};
 
 	const togglePlay = () => {
@@ -52,7 +58,6 @@
 
 	const handleUpdateBeatsPerMeasure = (event: Event) => {
 		const { value } = event.target as HTMLInputElement;
-		console.log(value);
 		if (Number(value) < 2) return;
 		updateBeatsPerMeasure(value);
 	};
@@ -68,6 +73,28 @@
 		updateVolume(Number(value));
 	};
 
+	setInterval(() => {
+		if (audioService.audioContext && !isPaused && isPlaying) {
+			currentTime = audioService.audioContext.currentTime;
+		}
+	}, 500);
+
+	// Format time as MM:SS or HH:MM:SS
+	const formatTime = (timeInSeconds: number) => {
+		const hours = Math.floor(timeInSeconds / 3600);
+		const minutes = Math.floor((timeInSeconds - hours * 3600) / 60);
+		const seconds = Math.floor(timeInSeconds - hours * 3600 - minutes * 60);
+
+		let formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds
+			.toString()
+			.padStart(2, '0')}`;
+		if (hours > 0) {
+			formattedTime = `${hours.toString().padStart(2, '0')}:${formattedTime}`;
+		}
+
+		return formattedTime;
+	};
+
 	onDestroy(() => {
 		metronomeService.unsubscribe?.();
 	});
@@ -78,6 +105,7 @@
 	on:click={tap}>Tap to set BPM</button
 >
 <input
+	disabled={hasMidi}
 	class="border text-slate-700 py-1 px-2 focus:outline-none focus:border-slate-600 rounded-md"
 	min="60"
 	type="number"
@@ -86,6 +114,7 @@
 />
 <div class="flex w-[200px] gap-2">
 	<input
+		disabled={hasMidi}
 		class="border text-slate-700 py-1 px-2 focus:outline-none focus:border-slate-600 rounded-md w-full"
 		min="2"
 		type="number"
@@ -93,6 +122,7 @@
 		on:input={handleUpdateBeatsPerMeasure}
 	/>
 	<input
+		disabled={hasMidi}
 		class="border text-slate-700 py-1 px-2 focus:outline-none focus:border-slate-600 rounded-md w-full"
 		min="4"
 		type="number"
@@ -117,11 +147,18 @@
 	>
 </div>
 <div>{isPlaying ? 'Playing' : 'Paused'}</div>
-<input
-	id="default-range"
-	type="range"
-	value={volume}
-	on:input={handleUpdateVolume}
-	class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-/>
-{volume}
+<div class="flex gap-4 items-baseline">
+	<input
+		id="default-range"
+		type="range"
+		value={volume}
+		on:input={handleUpdateVolume}
+		class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+	/>
+	<div class="w-[30px]">
+		{volume}
+	</div>
+</div>
+<div>
+	{formatTime(currentTime)}
+</div>

@@ -1,5 +1,6 @@
 import type { Unsubscriber } from 'svelte/store';
 import metronomeStore, {
+	updateHasMidi,
 	updateIsPaused,
 	updateIsPlaying,
 	type TimeSignature
@@ -14,7 +15,6 @@ export class MetronomeService {
 	public timeSignature: TimeSignature = { beatsPerMeasure: 4, beatUnit: 4 };
 	private audioService = AudioService.getInstance();
 	public nextNoteTime = 0.0;
-	private pauseTime: number = 0.0;
 	public beatNumber = 1;
 	private intervalID: number | undefined;
 	public unsubscribe?: Unsubscriber;
@@ -33,6 +33,10 @@ export class MetronomeService {
 
 	setMasterTrack(masterTrack: MasterTrack) {
 		this.masterTrack = masterTrack;
+		updateHasMidi(true);
+		this.audioService?.initAudioContext();
+		this.setBpm();
+		this.setTimeSignature();
 	}
 
 	subscribeToStore() {
@@ -45,7 +49,6 @@ export class MetronomeService {
 	start() {
 		if (!this.intervalID) {
 			this.audioService?.initAudioContext();
-			this.nextNoteTime = 0;
 			this.intervalID = setInterval(this.scheduler, 25);
 			updateIsPlaying(true);
 			updateIsPaused(false);
@@ -54,25 +57,34 @@ export class MetronomeService {
 
 	stop() {
 		if (this.intervalID !== undefined) {
+			this.audioService.audioContext?.close();
 			clearInterval(this.intervalID);
 			this.intervalID = undefined;
 		}
 		this.beatNumber = 1;
+		this.nextNoteTime = 0.0;
 		updateIsPlaying(false);
 	}
 
+	reset() {
+		clearInterval(this.intervalID);
+		this.intervalID = undefined;
+		this.beatNumber = 1;
+		this.nextNoteTime = 0.0;
+	}
+
 	togglePlay() {
-		if (!this.intervalID) {
-			const currentTime = this.audioService.audioContext!.currentTime;
-			const timeElapsedSincePause = currentTime - this.pauseTime;
-			this.nextNoteTime += timeElapsedSincePause; // Add the offset to align nextNoteTime with new currentTime
-			this.intervalID = setInterval(this.scheduler, 25);
-			updateIsPaused(false);
-		} else {
-			this.pauseTime = this.audioService.audioContext!.currentTime;
-			clearInterval(this.intervalID);
-			this.intervalID = undefined;
-			updateIsPaused(true);
+		if (this.audioService.audioContext) {
+			if (!this.intervalID) {
+				this.intervalID = setInterval(this.scheduler, 25);
+				updateIsPaused(false);
+				this.audioService.audioContext.resume();
+			} else {
+				clearInterval(this.intervalID);
+				this.intervalID = undefined;
+				updateIsPaused(true);
+				this.audioService.audioContext.suspend();
+			}
 		}
 	}
 
@@ -83,20 +95,23 @@ export class MetronomeService {
 
 		while (this.nextNoteTime < currentTime) {
 			this.audioService.scheduleSound(this.beatNumber, currentTime);
-			if (this.beatNumber % this.timeSignature.beatsPerMeasure === 1) {
-				this.setBpm();
-				this.setTimeSignature();
-				console.log('change here');
-			}
+			this.firstBeatUpdate();
 			this.advanceTime();
 			this.updateBeatNumber();
 		}
 	};
 
+	private firstBeatUpdate() {
+		if (this.beatNumber % this.timeSignature.beatsPerMeasure === 1) {
+			this.setBpm();
+			this.setTimeSignature();
+		}
+	}
+
 	private setBpm() {
 		if (!this.masterTrack?.length) return;
 
-		const currentTimestamp = this.nextNoteTime * 1000;
+		const currentTimestamp = this.audioService.audioContext!.currentTime * 1000;
 
 		const tempos = this.masterTrack
 			.filter((track) => track.type === 'tempo')
@@ -115,7 +130,7 @@ export class MetronomeService {
 	private setTimeSignature() {
 		if (!this.masterTrack?.length) return;
 
-		const currentTimestamp = this.nextNoteTime * 1000;
+		const currentTimestamp = this.audioService.audioContext!.currentTime * 1000;
 
 		const timeSignatures = this.masterTrack
 			.filter((track) => track.type === 'timeSignature')

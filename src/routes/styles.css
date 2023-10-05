@@ -5,3 +5,14 @@
 html {
 	@apply bg-slate-600 text-white;
 }
+
+input[type='range']::-webkit-slider-thumb {
+	box-shadow: 1px 2px 2px 0 rgba(0, 0, 0, 0.129);
+	@apply bg-violet-700;
+	@apply hover:bg-violet-600;
+	@apply active:bg-violet-500;
+	-webkit-appearance: none;
+	height: 16px;
+	width: 16px;
+	border-radius: 50%;
+}

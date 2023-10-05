@@ -13,6 +13,8 @@
 		for (const file of files) {
 			midiService.parseMidiData(file).then(() => {
 				metronomeService.setMasterTrack(midiService.masterTrack);
+				metronomeService.reset();
+				metronomeService.start();
 			});
 		}
 	}

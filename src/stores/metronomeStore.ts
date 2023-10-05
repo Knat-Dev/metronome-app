@@ -8,6 +8,7 @@ export type TimeSignature = {
 const metronomeStore = writable({
 	isPlaying: false,
 	isPaused: false,
+	hasMidi: false,
 	bpm: 220,
 	timeSignature: { beatsPerMeasure: 4, beatUnit: 4 } as TimeSignature,
 	volume: 100
@@ -24,6 +25,13 @@ export const updateIsPaused = (val: boolean) => {
 	metronomeStore.update((state) => ({
 		...state,
 		isPaused: val
+	}));
+};
+
+export const updateHasMidi = (val: boolean) => {
+	metronomeStore.update((state) => ({
+		...state,
+		hasMidi: val
 	}));
 };
 
