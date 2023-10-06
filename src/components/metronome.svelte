@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	import { AudioService } from '../services/AudioService';
-	import { MetronomeService } from '../services/MetronomeService';
-	import { TapTempoService } from '../services/TapTempoService';
+	import { audioService } from '../services/AudioService';
+	import { metronomeService } from '../services/MetronomeService';
+	import { tapTempoService } from '../services/TapTempoService';
 	import metronomeStore, {
 		updateBeatUnit,
 		updateBeatsPerMeasure,
@@ -10,10 +10,6 @@
 		updateVolume,
 		type TimeSignature
 	} from '../stores/metronomeStore';
-
-	const tapTempoService = new TapTempoService();
-	const metronomeService = MetronomeService.getInstance();
-	const audioService = AudioService.getInstance();
 
 	let currentTime = 0;
 	let isPlaying = false;
@@ -32,8 +28,9 @@
 		volume = val.volume;
 	});
 
-	const start = () => {
-		// const midiService = MidiService.getInstance();
+	const start = (event: Event) => {
+		const keyboardEvent = event as KeyboardEvent;
+		if (event.type === 'keydown' && keyboardEvent.key !== 'Space') return;
 		metronomeService.start();
 	};
 
@@ -42,12 +39,14 @@
 		currentTime = 0.0;
 	};
 
-	const togglePlay = () => {
+	const togglePlay = (event: Event) => {
+		const keyboardEvent = event as KeyboardEvent;
+		if (event.type === 'keydown' && keyboardEvent.key !== 'Space') return;
 		metronomeService.togglePlay();
 	};
 
 	const tap = () => {
-		tapTempoService.tap();
+		tapTempoService.recordTap();
 	};
 
 	const emitChange = (event: Event) => {
@@ -102,7 +101,8 @@
 
 <button
 	class="max-w-sm py-2 px-5 text-white rounded-md border-white border hover:bg-violet-700 hover:text-white transition-colors hover:border-violet-700 active:bg-violet-600"
-	on:click={tap}>Tap to set BPM</button
+	on:keydown={tap}
+	on:mousedown={tap}>Tap to set BPM</button
 >
 <input
 	disabled={hasMidi}
@@ -133,20 +133,23 @@
 <div class="flex gap-2 pb-0 items-center">
 	{#if isPlaying}
 		<button
-			class="py-2 px-5 bg-violet-700 text-white rounded-md hover:bg-violet-600 transition-colors"
-			on:click={togglePlay}>{isPaused ? 'Play' : 'Pause'}</button
+			class="w-[80px] py-2 px-5 bg-violet-700 text-white rounded-md hover:bg-violet-600 transition-colors"
+			on:keydown={togglePlay}
+			on:mousedown={togglePlay}>{isPaused ? 'Play' : 'Pause'}</button
+		>
+		<button
+			class="max-w-sm py-2 px-5 text-white rounded-md border-white border hover:bg-violet-700 hover:text-white transition-colors hover:border-violet-700 active:bg-violet-600"
+			on:click={stop}>Stop</button
+		>
+	{:else}
+		<button
+			class="w-[80px] py-2 px-5 bg-violet-700 text-white rounded-md hover:bg-violet-600 transition-colors"
+			on:keydown={start}
+			on:mousedown={start}>Start</button
 		>
 	{/if}
-	<button
-		class="py-2 px-5 bg-violet-700 text-white rounded-md hover:bg-violet-600 transition-colors"
-		on:click={start}>Start</button
-	>
-	<button
-		class="max-w-sm py-2 px-5 text-white rounded-md border-white border hover:bg-violet-700 hover:text-white transition-colors hover:border-violet-700 active:bg-violet-600"
-		on:click={stop}>Stop</button
-	>
 </div>
-<div>{isPlaying ? 'Playing' : 'Paused'}</div>
+<div>{!isPlaying ? 'Stopped' : isPaused ? 'Paused' : 'Playing'}</div>
 <div class="flex gap-4 items-baseline">
 	<input
 		id="default-range"

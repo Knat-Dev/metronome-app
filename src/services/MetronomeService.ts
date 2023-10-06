@@ -1,40 +1,37 @@
 import type { Unsubscriber } from 'svelte/store';
+import { Singleton } from '../classes/Singleton';
 import metronomeStore, {
 	updateHasMidi,
 	updateIsPaused,
 	updateIsPlaying,
 	type TimeSignature
 } from '../stores/metronomeStore';
-import { AudioService } from './AudioService';
-import type { MasterTrack } from './MidiService';
+import { audioService } from './AudioService';
+import {
+	MidiEventType,
+	type MasterTrack,
+	type TempoEvent,
+	type TimeSignatureEvent
+} from './MidiService';
 
-export class MetronomeService {
-	private static instance: MetronomeService | null = null;
+export class MetronomeService extends Singleton {
 	private masterTrack: MasterTrack = [];
 	public bpm = 120;
 	public timeSignature: TimeSignature = { beatsPerMeasure: 4, beatUnit: 4 };
-	private audioService = AudioService.getInstance();
 	public nextNoteTime = 0.0;
 	public beatNumber = 1;
 	private intervalID: number | undefined;
 	public unsubscribe?: Unsubscriber;
 
-	private constructor() {
+	constructor() {
+		super();
 		this.subscribeToStore();
-	}
-
-	static getInstance(): MetronomeService {
-		if (!MetronomeService.instance) {
-			MetronomeService.instance = new MetronomeService();
-		}
-
-		return MetronomeService.instance;
 	}
 
 	setMasterTrack(masterTrack: MasterTrack) {
 		this.masterTrack = masterTrack;
 		updateHasMidi(true);
-		this.audioService?.initAudioContext();
+		audioService?.initAudioContext();
 		this.setBpm();
 		this.setTimeSignature();
 	}
@@ -48,7 +45,7 @@ export class MetronomeService {
 
 	start() {
 		if (!this.intervalID) {
-			this.audioService?.initAudioContext();
+			audioService?.initAudioContext();
 			this.intervalID = setInterval(this.scheduler, 25);
 			updateIsPlaying(true);
 			updateIsPaused(false);
@@ -57,13 +54,18 @@ export class MetronomeService {
 
 	stop() {
 		if (this.intervalID !== undefined) {
-			this.audioService.audioContext?.close();
+			audioService.audioContext?.close();
 			clearInterval(this.intervalID);
 			this.intervalID = undefined;
 		}
 		this.beatNumber = 1;
 		this.nextNoteTime = 0.0;
 		updateIsPlaying(false);
+	}
+
+	restart() {
+		this.reset();
+		this.start();
 	}
 
 	reset() {
@@ -74,34 +76,34 @@ export class MetronomeService {
 	}
 
 	togglePlay() {
-		if (this.audioService.audioContext) {
+		if (audioService.audioContext) {
 			if (!this.intervalID) {
 				this.intervalID = setInterval(this.scheduler, 25);
 				updateIsPaused(false);
-				this.audioService.audioContext.resume();
+				audioService.audioContext.resume();
 			} else {
 				clearInterval(this.intervalID);
 				this.intervalID = undefined;
 				updateIsPaused(true);
-				this.audioService.audioContext.suspend();
+				audioService.audioContext.suspend();
 			}
 		}
 	}
 
 	private scheduler = (): void => {
-		if (!this.audioService) return;
+		if (!audioService) return;
 
-		const currentTime = this.audioService.audioContext!.currentTime;
+		const currentTime = audioService.audioContext!.currentTime;
 
 		while (this.nextNoteTime < currentTime) {
-			this.audioService.scheduleSound(this.beatNumber, currentTime);
-			this.firstBeatUpdate();
+			audioService.scheduleSound(this.beatNumber, currentTime);
+			this.firstBeatUpdates();
 			this.advanceTime();
 			this.updateBeatNumber();
 		}
 	};
 
-	private firstBeatUpdate() {
+	private firstBeatUpdates() {
 		if (this.beatNumber % this.timeSignature.beatsPerMeasure === 1) {
 			this.setBpm();
 			this.setTimeSignature();
@@ -111,11 +113,11 @@ export class MetronomeService {
 	private setBpm() {
 		if (!this.masterTrack?.length) return;
 
-		const currentTimestamp = this.audioService.audioContext!.currentTime * 1000;
+		const currentTimestamp = audioService.audioContext!.currentTime * 1000;
 
 		const tempos = this.masterTrack
-			.filter((track) => track.type === 'tempo')
-			.filter((track) => track.timestamp <= currentTimestamp);
+			.filter((track) => track.type === MidiEventType.Tempo)
+			.filter((track) => track.timestamp <= currentTimestamp) as TempoEvent[];
 
 		const bpm = Math.round(tempos[tempos.length - 1]?.bpm ?? 0);
 
@@ -130,19 +132,19 @@ export class MetronomeService {
 	private setTimeSignature() {
 		if (!this.masterTrack?.length) return;
 
-		const currentTimestamp = this.audioService.audioContext!.currentTime * 1000;
+		const currentTimestamp = audioService.audioContext!.currentTime * 1000;
 
 		const timeSignatures = this.masterTrack
-			.filter((track) => track.type === 'timeSignature')
-			.filter((track) => track.timestamp <= currentTimestamp);
+			.filter((track) => track.type === MidiEventType.TimeSignature)
+			.filter((track) => track.timestamp <= currentTimestamp) as TimeSignatureEvent[];
 
-		const timeSignature = timeSignatures[timeSignatures.length - 1]?.timeSignature ?? [4, 4];
+		const timeSignature = timeSignatures[timeSignatures.length - 1]?.timeSignature;
 
 		if (typeof timeSignature === 'undefined') return;
 
 		metronomeStore.update((state) => ({
 			...state,
-			timeSignature: { beatsPerMeasure: timeSignature[0], beatUnit: timeSignature[1] }
+			timeSignature
 		}));
 	}
 
@@ -154,3 +156,5 @@ export class MetronomeService {
 		this.beatNumber = (this.beatNumber % this.timeSignature.beatsPerMeasure) + 1;
 	}
 }
+
+export const metronomeService = MetronomeService.getInstance();

@@ -1,24 +1,17 @@
 <script lang="ts">
 	import Metronome from '../components/metronome.svelte';
-	import { MetronomeService } from '../services/MetronomeService';
-	import { MidiService } from '../services/MidiService';
+	import { metronomeService } from '../services/MetronomeService';
+	import { midiService } from '../services/MidiService';
 	let files: FileList;
-	const midiService = MidiService.getInstance();
-	const metronomeService = MetronomeService.getInstance();
 
 	$: if (files) {
-		// Note that `files` is of type `FileList`, not an Array:
-		// https://developer.mozilla.org/en-US/docs/Web/API/FileList
-
-		for (const file of files) {
-			midiService.parseMidiData(file).then(() => {
+		if (files.length > 0)
+			midiService.parseMidiData(files[0]).then(() => {
 				metronomeService.setMasterTrack(midiService.masterTrack);
-				metronomeService.reset();
-				metronomeService.start();
+				metronomeService.restart();
 			});
-		}
 	}
 </script>
 
 <Metronome />
-<input type="file" id="midiFile" accept=".midi, .mid" bind:files />
+<input class="h-[150px]" type="file" id="midiFile" accept=".midi, .mid" bind:files />

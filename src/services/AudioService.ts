@@ -1,44 +1,76 @@
+import { Singleton } from '../classes/Singleton';
 import metronomeStore from '../stores/metronomeStore';
 
-export class AudioService {
-	static instance: AudioService;
+// Named constants for better readability
+const DEFAULT_NOTE_LENGTH = 0.05;
+const ALMOST_ZERO = 0.001;
+const FIRST_BEAT_FREQ = 880;
+const OTHER_BEAT_FREQ = 440;
+
+export class AudioService extends Singleton {
 	audioContext: AudioContext | null = null;
 	beatNumber: number = 0;
-	noteLength = 0.05; // length of "beep" in seconds
+	noteLength = DEFAULT_NOTE_LENGTH; // length of "beep" in seconds
 	volume = 100;
 
-	private constructor() {
+	constructor() {
+		super();
+		this.subscribeToVolume();
+	}
+
+	private subscribeToVolume() {
+		// Unsubscribe logic could be added here if needed
 		metronomeStore.subscribe((val) => {
 			this.volume = val.volume;
 		});
 	}
 
-	static getInstance(): AudioService {
-		if (!AudioService.instance) {
-			AudioService.instance = new AudioService();
-		}
-
-		return AudioService.instance;
-	}
-
 	initAudioContext() {
-		this.audioContext = new AudioContext();
+		try {
+			this.audioContext = new AudioContext();
+		} catch (error) {
+			console.error('Failed to initialize AudioContext:', error);
+		}
 	}
 
 	scheduleSound(beatNumber: number, time: number) {
-		if (!this.audioContext) return;
-		const osc = this.audioContext.createOscillator();
-		const gain = this.audioContext.createGain();
+		const audioContext = this.ensureAudioContext();
+		if (!audioContext) return;
 
-		osc.connect(gain).connect(this.audioContext.destination);
-		gain.gain.value = beatNumber === 1 ? this.volume * 0.008 : this.volume * 0.004; // Emphasize the first beat
-		osc.frequency.value = beatNumber === 1 ? 880 : 440; // Different frequency for the first beat
+		const osc = audioContext.createOscillator();
+		const master = audioContext.createGain();
 
+		this.configureOscillator(osc, master, beatNumber);
+		this.startAndStopOscillator(osc, master, time);
+	}
+
+	private ensureAudioContext(): AudioContext | null {
+		if (!this.audioContext) {
+			console.error('AudioContext not initialized.');
+			return null;
+		}
+		return this.audioContext;
+	}
+
+	private configureOscillator(osc: OscillatorNode, master: GainNode, beatNumber: number) {
+		osc.connect(master).connect(this.audioContext!.destination);
+		master.gain.value = this.calculateGain(beatNumber);
+		osc.frequency.value = this.calculateFrequency(beatNumber);
+	}
+
+	private calculateGain(beatNumber: number): number {
+		return (this.volume / 100) * (beatNumber === 1 ? 0.8 : 0.4);
+	}
+
+	private calculateFrequency(beatNumber: number): number {
+		return beatNumber === 1 ? FIRST_BEAT_FREQ : OTHER_BEAT_FREQ;
+	}
+
+	private startAndStopOscillator(osc: OscillatorNode, master: GainNode, time: number) {
 		osc.start(time);
-
-		// Smoothly ramp down the gain to almost zero just before the oscillator stops
-		gain.gain.exponentialRampToValueAtTime(0.001, time + this.noteLength + 0.001);
-
+		master.gain.exponentialRampToValueAtTime(ALMOST_ZERO, time + this.noteLength - ALMOST_ZERO);
 		osc.stop(time + this.noteLength);
 	}
 }
+
+export const audioService = AudioService.getInstance();

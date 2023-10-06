@@ -1,48 +1,67 @@
 import { Midi } from '@tonejs/midi';
-import type SongPart from '../models/SongPart';
+import { Singleton } from '../classes/Singleton';
+import type { TimeSignature } from '../stores/metronomeStore';
 
-export type MasterTrack = {
+export const MidiEventType = {
+	Tempo: 'tempo',
+	TimeSignature: 'timeSignature'
+} as const;
+
+export interface TempoEvent {
 	timestamp: number;
-	type: string;
-	bpm?: number;
-	timeSignature?: number[];
-}[];
+	type: typeof MidiEventType.Tempo;
+	bpm: number;
+}
 
-export class MidiService {
-	private static instance: MidiService | null = null;
-	masterTrack = [] as MasterTrack;
-	private constructor() {}
+export interface TimeSignatureEvent {
+	timestamp: number;
+	type: typeof MidiEventType.TimeSignature;
+	timeSignature: TimeSignature;
+}
 
-	static getInstance(): MidiService {
-		if (!MidiService.instance) {
-			MidiService.instance = new MidiService();
-		}
+export type MasterTrackEvent = TempoEvent | TimeSignatureEvent;
+export type MasterTrack = MasterTrackEvent[];
 
-		return MidiService.instance;
+export class MidiService extends Singleton {
+	private _masterTrack: MasterTrack = [];
+
+	get masterTrack(): MasterTrack {
+		return this._masterTrack;
 	}
 
-	songParts: SongPart[] = [];
+	constructor() {
+		super();
+	}
 
 	async parseMidiData(midiFile: File): Promise<void> {
-		const midi = new Midi(await midiFile.arrayBuffer());
+		try {
+			const midi = new Midi(await midiFile.arrayBuffer());
+			this._masterTrack = this.extractAndSortMasterTrack(midi);
+		} catch (error) {
+			console.error('Failed to parse MIDI data:', error);
+			throw new Error('MIDI data parsing failed.');
+		}
+	}
 
-		// Extract tempo and time signature data from the MIDI header
+	private extractAndSortMasterTrack(midi: Midi): MasterTrack {
 		const timeSignatures = midi.header.timeSignatures;
 		const tempos = midi.header.tempos;
 
 		const masterTrack: MasterTrack = [
 			...tempos.map((event) => ({
 				timestamp: event.ticks,
-				type: 'tempo',
+				type: MidiEventType.Tempo,
 				bpm: event.bpm
 			})),
 			...timeSignatures.map((event) => ({
 				timestamp: event.ticks,
-				type: 'timeSignature',
-				timeSignature: [event.timeSignature[0], event.timeSignature[1]]
+				type: MidiEventType.TimeSignature,
+				timeSignature: { beatsPerMeasure: event.timeSignature[0], beatUnit: event.timeSignature[1] }
 			}))
 		];
-		masterTrack.sort((a, b) => a.timestamp - b.timestamp);
-		this.masterTrack = masterTrack;
+
+		return masterTrack.sort((a, b) => a.timestamp - b.timestamp);
 	}
 }
+
+export const midiService = MidiService.getInstance();
