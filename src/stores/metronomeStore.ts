@@ -43,7 +43,6 @@ export const updateBpm = (val: unknown) => {
 };
 
 export const updateBeatsPerMeasure = (val: unknown) => {
-	console.log(val);
 	metronomeStore.update((state) => ({
 		...state,
 		timeSignature: { beatsPerMeasure: Number(val), beatUnit: state.timeSignature.beatUnit }

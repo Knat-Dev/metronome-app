@@ -30,7 +30,7 @@
 
 	const start = (event: Event) => {
 		const keyboardEvent = event as KeyboardEvent;
-		if (event.type === 'keydown' && keyboardEvent.key !== 'Space') return;
+		if (event.type === 'keydown' && keyboardEvent.key !== ' ') return;
 		metronomeService.start();
 	};
 
@@ -41,11 +41,13 @@
 
 	const togglePlay = (event: Event) => {
 		const keyboardEvent = event as KeyboardEvent;
-		if (event.type === 'keydown' && keyboardEvent.key !== 'Space') return;
+		if (event.type === 'keydown' && keyboardEvent.key !== ' ') return;
 		metronomeService.togglePlay();
 	};
 
-	const tap = () => {
+	const tap = (event: Event) => {
+		const keyboardEvent = event as KeyboardEvent;
+		if (event.type === 'keydown' && keyboardEvent.key !== ' ') return;
 		tapTempoService.recordTap();
 	};
 
@@ -132,7 +134,9 @@
 </div>
 <div class="flex gap-2 pb-0 items-center">
 	{#if isPlaying}
+		<!-- svelte-ignore a11y-autofocus -->
 		<button
+			autofocus
 			class="w-[80px] py-2 px-5 bg-violet-700 text-white rounded-md hover:bg-violet-600 transition-colors"
 			on:keydown={togglePlay}
 			on:mousedown={togglePlay}>{isPaused ? 'Play' : 'Pause'}</button

@@ -35,7 +35,17 @@ export class TapTempoService extends Singleton {
 	}
 
 	private removeExpiredTaps(currentTime: number): void {
+		const originalTapCount = this.taps.length;
 		this.taps = this.taps.filter((tap) => currentTime - tap < this.timeWindowInMs);
+
+		// Reset EMA if all taps were expired
+		if (originalTapCount > 0 && this.taps.length === 0) {
+			this.resetEMA();
+		}
+	}
+
+	private resetEMA(): void {
+		this.emaInterval = 0;
 	}
 
 	private isEnoughTapsForCalculation(): boolean {

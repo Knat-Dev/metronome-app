@@ -46,7 +46,7 @@ export class MetronomeService extends Singleton {
 	start() {
 		if (!this.intervalID) {
 			audioService?.initAudioContext();
-			this.intervalID = setInterval(this.scheduler, 25);
+			this.intervalID = setInterval(this.scheduler, 10);
 			updateIsPlaying(true);
 			updateIsPaused(false);
 		}
@@ -78,7 +78,7 @@ export class MetronomeService extends Singleton {
 	togglePlay() {
 		if (audioService.audioContext) {
 			if (!this.intervalID) {
-				this.intervalID = setInterval(this.scheduler, 25);
+				this.intervalID = setInterval(this.scheduler, 10);
 				updateIsPaused(false);
 				audioService.audioContext.resume();
 			} else {

@@ -2,7 +2,7 @@ import { Singleton } from '../classes/Singleton';
 import metronomeStore from '../stores/metronomeStore';
 
 // Named constants for better readability
-const DEFAULT_NOTE_LENGTH = 0.05;
+const DEFAULT_NOTE_LENGTH = 0.025;
 const ALMOST_ZERO = 0.001;
 const FIRST_BEAT_FREQ = 880;
 const OTHER_BEAT_FREQ = 440;
@@ -59,7 +59,7 @@ export class AudioService extends Singleton {
 	}
 
 	private calculateGain(beatNumber: number): number {
-		return (this.volume / 100) * (beatNumber === 1 ? 0.8 : 0.4);
+		return (this.volume / 100) * (beatNumber === 1 ? 1 : 0.6);
 	}
 
 	private calculateFrequency(beatNumber: number): number {
