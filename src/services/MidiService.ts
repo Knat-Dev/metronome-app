@@ -1,6 +1,6 @@
 import { Midi } from '@tonejs/midi';
 import { Singleton } from '../classes/Singleton';
-import type { TimeSignature } from '../stores/metronomeStore';
+import type { TimeSignature } from '../types';
 
 export const MidiEventType = {
 	Tempo: 'tempo',

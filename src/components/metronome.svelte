@@ -1,15 +1,8 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
 	import { audioService } from '../services/AudioService';
-	import { metronomeService } from '../services/MetronomeService';
-	import { tapTempoService } from '../services/TapTempoService';
-	import metronomeStore, {
-		updateBeatUnit,
-		updateBeatsPerMeasure,
-		updateBpm,
-		updateVolume,
-		type TimeSignature
-	} from '../stores/metronomeStore';
+	import { metronomeStore } from '../stores/metronomeStore';
+	import { recordTap } from '../stores/tapTempoStore';
+	import type { TimeSignature } from '../types';
 
 	let currentTime = 0;
 	let isPlaying = false;
@@ -17,7 +10,7 @@
 	let hasMidi = false;
 	let bpm = 120;
 	let timeSignature = { beatsPerMeasure: 4, beatUnit: 4 } as TimeSignature;
-	let volume = 1;
+	let volume = 50;
 
 	metronomeStore.subscribe((val) => {
 		isPlaying = val.isPlaying;
@@ -25,53 +18,56 @@
 		hasMidi = val.hasMidi;
 		bpm = val.bpm;
 		timeSignature = val.timeSignature;
-		volume = val.volume;
+		volume = Math.round(val.volume * 100);
 	});
 
 	const start = (event: Event) => {
 		const keyboardEvent = event as KeyboardEvent;
 		if (event.type === 'keydown' && keyboardEvent.key !== ' ') return;
-		metronomeService.start();
+		metronomeStore.start();
 	};
 
 	const stop = () => {
-		metronomeService.stop();
+		metronomeStore.stop();
 		currentTime = 0.0;
 	};
 
 	const togglePlay = (event: Event) => {
 		const keyboardEvent = event as KeyboardEvent;
 		if (event.type === 'keydown' && keyboardEvent.key !== ' ') return;
-		metronomeService.togglePlay();
+		metronomeStore.togglePlay();
 	};
 
 	const tap = (event: Event) => {
 		const keyboardEvent = event as KeyboardEvent;
 		if (event.type === 'keydown' && keyboardEvent.key !== ' ') return;
-		tapTempoService.recordTap();
+		recordTap();
 	};
 
 	const emitChange = (event: Event) => {
 		const { value } = event.target as HTMLInputElement;
-		if (Number(value) < 60) return;
-		updateBpm(value);
+		const asNumber = Number(value);
+		if (asNumber < 60) return;
+		metronomeStore.updateBpm(asNumber);
 	};
 
 	const handleUpdateBeatsPerMeasure = (event: Event) => {
 		const { value } = event.target as HTMLInputElement;
-		if (Number(value) < 2) return;
-		updateBeatsPerMeasure(value);
+		const asNumber = Number(value);
+		if (asNumber < 2) return;
+		metronomeStore.updateBeatsPerMeasure(asNumber);
 	};
 
 	const handleUpdateBeatUnit = (event: Event) => {
 		const { value } = event.target as HTMLInputElement;
-		if (Number(value) < 4) return;
-		updateBeatUnit(value);
+		const asNumber = Number(value);
+		if (asNumber < 4) return;
+		metronomeStore.updateBeatUnit(asNumber);
 	};
 
 	const handleUpdateVolume = (event: Event) => {
 		const { value } = event.target as HTMLInputElement;
-		updateVolume(Number(value));
+		metronomeStore.updateVolume(Number(value) / 100);
 	};
 
 	setInterval(() => {
@@ -95,10 +91,6 @@
 
 		return formattedTime;
 	};
-
-	onDestroy(() => {
-		metronomeService.unsubscribe?.();
-	});
 </script>
 
 <button
@@ -137,17 +129,17 @@
 		<!-- svelte-ignore a11y-autofocus -->
 		<button
 			autofocus
-			class="w-[80px] py-2 px-5 bg-violet-700 text-white rounded-md hover:bg-violet-600 transition-colors"
+			class="w-[80px] h-[40px] py-2 px-5 bg-violet-700 text-white rounded-md hover:bg-violet-600 transition-colors"
 			on:keydown={togglePlay}
 			on:mousedown={togglePlay}>{isPaused ? 'Play' : 'Pause'}</button
 		>
 		<button
-			class="max-w-sm py-2 px-5 text-white rounded-md border-white border hover:bg-violet-700 hover:text-white transition-colors hover:border-violet-700 active:bg-violet-600"
+			class="max-w-sm h-[40px] py-2 px-5 text-white rounded-md border-white border hover:bg-violet-700 hover:text-white transition-colors hover:border-violet-700 active:bg-violet-600"
 			on:click={stop}>Stop</button
 		>
 	{:else}
 		<button
-			class="w-[80px] py-2 px-5 bg-violet-700 text-white rounded-md hover:bg-violet-600 transition-colors"
+			class="w-[80px] h-[40px] py-2 px-5 bg-violet-700 text-white rounded-md hover:bg-violet-600 transition-colors"
 			on:keydown={start}
 			on:mousedown={start}>Start</button
 		>
